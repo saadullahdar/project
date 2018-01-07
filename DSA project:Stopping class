@@ -1,0 +1,48 @@
+package javaapplication60;
+
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.Enumeration;
+import java.util.HashMap;
+
+public class JavaApplication60 {
+    public static void main(String[] args) throws ClassNotFoundException {
+        Stopper words = new Stopper();
+        words.makeStop();
+        saveStopping store = new saveStopping(words.getStops());
+        store.save();
+    }
+}
+class saveStopping implements Serializable {
+
+    private HashMap<String, String> Swords = new HashMap<String, String>();
+    saveStopping(HashMap<String, String> s) {
+        Swords = s;
+    }
+    public void save() {
+        try {
+            FileOutputStream file = new FileOutputStream("stoppingWords.ser");
+            ObjectOutputStream stream = new ObjectOutputStream(file);
+            stream.writeObject(Swords);
+            stream.flush();
+            stream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+class Stopper {
+        private HashMap<String, String> stopping = new HashMap<String, String>();
+    void makeStop() {
+        String[] stops = {"a", "about", "also","above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "could", "did", "do", "does", "doing", "down", "during", "each", "few", "for", "from", "further", "had", "has", "have", "having", "he", "her", "here", "herself", "him", "himself", "his", "how", "I", "if", "in", "into", "is", "it", "itself", "let", "me", "more", "most", "my", "myself", "nor", "of", "on", "once", "only", "or", "other", "ought", "our", "ourselves", "out", "over", "own", "same", "she", "should", "so", "some", "such", "than", "that", "the", "their", "them", "themselves", "then", "there", "these", "they", "this", "those", "through", "to", "too", "under", "until", "up", "very", "was", "we", "were", "what", "when", "where", "which", "while", "who", "whom", "why", "with", "would", "you", "your", "yourself", "yourselves"};
+        for (int i = 0; i < stops.length; i++) {
+            stopping.put(stops[i], null);
+        }
+    }
+    HashMap<String, String> getStops(){
+        return stopping;
+    }
+}

@@ -1,0 +1,237 @@
+package javaapplication57;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Scanner;
+import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
+
+public class JavaApplication57 {
+    
+   public static void main(String[] args) {
+
+      try {
+          File inputFile = new File("actual.xml");       //reading the crawled file 
+           SAXParserFactory factory = SAXParserFactory.newInstance();      
+           SAXParser saxParser = factory.newSAXParser();   
+           UserHandler parser = new UserHandler();     //parsing the above readed file
+           saxParser.parse(inputFile, parser);             //to parse the file
+           sortHash(parser.getHash());  //to be done by saadullah
+      } catch (Exception e) {
+         e.printStackTrace();
+      }
+   }
+}
+
+class doc { //doc class as contained by each word's set of documents
+    private int wrep;   //word repitition
+    private int trep;   //title repitition
+    private int hrep;   //heading repitition
+    doc() {
+        wrep = 1;       //initially it is one because it is created on repitition
+        trep = 0;
+        hrep = 0;
+    }
+
+    public void incWrep() {     //incrementation
+        wrep++;
+    }
+
+    public void incTrep() {
+        trep++;
+    }
+
+    public void incHrep() {
+        hrep++;
+    }
+
+    public int getWrep() {
+        return wrep;
+    }
+
+    public int getTrep() {
+        return trep;
+    }
+    
+    public int getHrep() {
+        return hrep;
+    }
+
+    public int getRank() {      //method to calculate page rank of each document based on word repitition in the document and whether it is in title etc
+        return ((5 * wrep) + (1000 * trep)+(500*hrep));
+    }
+}
+class UserHandler extends DefaultHandler {
+    Hashtable<String, Hashtable<String, doc>> ht = new Hashtable<String, Hashtable<String, doc>>();     //NESTED HASHTABLE because of its least COMPLEXITY
+        //First hash contains set of words , Nested hash contains set of documents list correspoding its info of doc object
+    boolean take = true;            //initiallizing
+    String id = "";
+    String wholeText = "";
+    String currentTitle = "";
+    boolean isTitle = false;
+    boolean isId = false;
+    boolean isText = false;
+    HashMap<String, String> titleWords = new HashMap<String, String>();     //words splitted in set of words in HASH for searching in constant complexity
+    HashMap<String, String> stopping;        //to get stopping words list and searching in constant complexity
+    HashMap<String, String> headingWords = new HashMap<String, String>();     //words splitted in set of words in HASH for searching in constant complexity headings
+        
+   UserHandler() throws ClassNotFoundException{
+        try {
+          FileInputStream stoppingFile = new FileInputStream("stoppingWords.ser");      //reading all stopping words hash from the stopping file, To be done by Mustafa
+          ObjectInputStream in = new ObjectInputStream(stoppingFile);       //reading
+          stopping = (HashMap<String, String>)in.readObject();       //getting that object of stopping list from file
+          in.close();       //closing that file 
+
+        } catch(java.io.IOException ioe) {  
+          ioe.printStackTrace();
+          System.exit(3);
+        }
+   }
+    boolean checkstop(HashMap<String, String> stwords, String word) { //method that checks if the word is stopping word [to avoid]
+        if (stwords.containsKey(word)) {        //if it is
+            return true;
+        }
+        return false;
+    }
+
+   
+   @Override
+       public void startElement(       //method that detects start of document
+            String uri, String localName, String qName, Attributes attributes)
+            throws SAXException {
+
+        if (qName.equalsIgnoreCase("page")) {}       //if page is detected
+        else if (qName.equalsIgnoreCase("title")) {       //if title detected
+            isTitle = true;
+        } else if (qName.equalsIgnoreCase("id")) {      //if id detected
+            isId = true;
+        } else if (qName.equalsIgnoreCase("text")) {        //if text detected
+            isText = true;
+        }
+
+   }
+
+   @Override
+    public void endElement(String uri,  
+            String localName, String qName) throws SAXException {
+
+        if (qName.equalsIgnoreCase("text")) {           //if text is detected
+            take = true;        //for initially taking id
+            //for filtering words having only alphabets and numbers and some other extras
+            wholeText = wholeText.replaceAll("(?s)\\{\\{(.+?)\\}\\}", " "); //remove links underneath headings
+            wholeText = wholeText.replaceAll("\\|", " "); //Separate multiple links
+            wholeText = wholeText.replaceAll("-", " ");
+            wholeText = wholeText.replaceAll("\\n", " "); //remove new lines
+            wholeText = wholeText.replaceAll("[^a-zA-Z0-9- \\s]", " "); //remove all non alphanumeric except dashes and spaces
+            wholeText = wholeText.replaceAll("\\s+", " ");
+            wholeText = wholeText.toLowerCase();
+            String[] words = wholeText.split(" ");      //splitting document in set of words
+            System.out.println(id);     //for checking id traversing during saving
+            for (int i = 0; i < words.length; i++) {        //all words traverser
+            if(words[i].startsWith("o", 0)){ //changed for each alphabet
+                String tec = id+" //"+currentTitle;
+                 if (ht.containsKey(words[i])) {     //when word is already added in the hash
+                        if (!ht.get(words[i]).containsKey(tec)) {    //but that document's id is not added
+                            doc d = new doc();      //make new object for this
+                          ht.get(words[i]).put(tec, d);
+                        }
+                        else {
+                            ht.get(words[i]).get(tec).incWrep();     //increment word's repitition for that particular word's current document
+                            if (titleWords.containsKey(words[i])) {     //if that word is title
+                                ht.get(words[i]).get(tec).incTrep();     //increment its title repitition
+                            }
+                            if (headingWords.containsKey(words[i])) {
+                                ht.get(words[i]).get(tec).incHrep();     //increment its heading repitition
+                            }
+                        }                    
+                    }
+                    else {
+                        if (!checkstop(stopping, words[i]) && !(words[i].length() == 1 && !(words[i].charAt(0) >= '0' && words[i].charAt(0) <= '9')) && words[i] != " ") {  //to avoid some stopping words and unusual words
+                            Hashtable<String, doc> temp = new Hashtable<String, doc>();     //make new hash for that word
+                            doc d = new doc();      //make new document's object
+                            temp.put(tec, d);      //put that id in hash
+                            ht.put(words[i], temp);     //putting in hash
+                        }
+                    }
+         }
+         }
+            isText = false;         //after end isText is reinitiallized
+            wholeText = "";     //after end text is reinitiallized for other document
+            id = "";        //after end id is reinitiallized for other document
+            headingWords.clear();  //clear all the elements of heading words after document is readed
+      }
+   }
+
+   @Override
+       public void characters(char ch[], int start, int length) throws SAXException {      //method that detects character on each line of document
+
+        if (isTitle) {      //when title is detected
+            currentTitle = new String(ch, start, length);   //getting current title of document
+            String titl[] = currentTitle.split(" ");            //splitting for getting words of document
+            titleWords.clear();
+          for (int i = 0; i < titl.length; i++) {             //whole words length
+                if (!titleWords.containsKey(titl[i]) && !checkstop(stopping,titl[i])) {     //if that word is not added previously
+                    titleWords.put(titl[i].toLowerCase(), null);      //adding the title word for searching in constant complexity
+                }
+            }
+         isTitle = false;        //back to false
+        } else if (isId) {      //when id is detected in XML
+            if (take) {     //to take it only one time for main document's id
+                id = new String(ch, start, length);     //getting id
+            take = false;       //back to false
+            }
+            isId = false;
+        } else if (isText) {        //when text is detected
+            String temp = new String(ch, start, length);
+            wholeText += temp;      //concatinating document's whole string by each line readed
+            Pattern pat = Pattern.compile("[\\=]{1}[a-zA-Z)0-9\\s]+[\\=]{1}");
+            Matcher mat = pat.matcher(temp);
+            String word = "";
+            while (mat.find()) {
+                word = mat.group();
+                word = word.replaceAll("=", "");
+                String hwords[] = word.split(" ");            //splitting for getting words of document
+                for (int i = 0; i < hwords.length; i++) {             //whole words length
+                    if (!headingWords.containsKey(hwords[i]) && !checkstop(stopping, hwords[i])) {     //if that word is not added previously
+                        headingWords.put(hwords[i].toLowerCase(), null);      //adding the heading word for searching in constant complexity
+                    }
+                }
+            }
+      }
+   }
+   public void showHash(){
+       
+            Enumeration<String> values = ht.keys();   
+                   while(values.hasMoreElements()){
+                       String n = (String) values.nextElement();        //words
+                       Enumeration<String> val = ht.get(n).keys();
+                       System.out.print(n+" -> ");
+                   while(val.hasMoreElements()){
+                       String n1 = (String) val.nextElement();  //ids
+                       System.out.print("["+n1);
+                       System.out.print(","+ht.get(n).get(n1).getWrep()+","+ht.get(n).get(n1).getTrep()+","+ht.get(n).get(n1).getRank()+"],");
+                   }
+                   System.out.println();
+           }
+   }
+   public  Hashtable<String, Hashtable<String,doc>> getHash(){
+       return ht;
+   }
+}

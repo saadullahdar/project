@@ -1,0 +1,42 @@
+public static void sortHash(Hashtable<String, Hashtable<String, doc>> h) {     //method to sort hashtable 
+        //concept of insertion is used for sorting as it is most probable the data is sorted because pagerank for many pages is same
+        DB db = DBMaker.fileDB("m.db").make();      //to create file of the hashtable
+        ConcurrentMap map = db.hashMap("map").create();         //Creation of map DB
+        Vector<String> vec;     //vector that contains set of documents corresponding to particular word in the document
+        Enumeration<String> values = h.keys();      //to traverse through whole hashtable
+           while (values.hasMoreElements()) {      //until end is reached
+            String n = (String) values.nextElement();        //to obtain words
+            Enumeration<String> val = h.get(n).keys();      //to obtain keys corresponding to that words
+            vec = new Vector<String>();             //assigning new vector for each word
+               System.out.print("Sorting " + n + " ");         //showing all steps
+            while (val.hasMoreElements()) {         //to traverse through set of documents corresponding to particular word
+                String n1 = (String) val.nextElement();  //this string contains id
+                String q = n1 + "// " + h.get(n).get(n1).getRank();       //to push that id document along with its page rank at last
+                vec.add(q);     //adding document for that word
+                int i = vec.size() - 1;         //to start from last
+                int rank = 0;           //initializing
+                String temp[];      //temp for splitting purpose below
+                int key = h.get(n).get(n1).getRank();       //containg rank for each word for each document from its object of nested hashtable
+                if (i > 0) {    //to overcome out of index issues
+                    temp = vec.get(i - 1).split(" ");       //splitting previously added document's rank
+                    rank = Integer.parseInt(temp[temp.length - 1]);     //last index as page rank is added at last for each document's data
+                }
+                while ((i > 0) && (key > rank)) {       //to sort newly inserted document
+                    String ele = vec.get(i - 1);        //temporary storing previous document's data for swapping
+                    vec.set(i - 1, vec.get(i));             //assigning that data to previous document
+                    vec.set(i, ele);        //assigning previous to new , JUST SWAPPING CONCEPT
+                    i--;        //to traverse through whole document's list for each word
+                    if (i > 0) {        //to avoid out of index issue
+                        temp = vec.get(i - 1).split(" ");       //splitting
+                        rank = Integer.parseInt(temp[temp.length - 1]);     //get rank from last document's last index
+                    }
+                }
+                                 h.get(n).remove(n1);        //removing that word's document from our hashtable after storing in our required hashtable
+                System.out.print(" " + n1);     
+            }
+            map.put(n, vec);            //storing that word corresponding document's list in our required hashtable
+            h.remove(n);        //removing whole word from previous hashtable as it is used now
+            System.out.println();
+        }
+           db.close();  //closing DB file for further processing
+    }
